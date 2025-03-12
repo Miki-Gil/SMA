@@ -1,0 +1,311 @@
+---
+title: "SMA_GLMM"
+author: "Michal Gilboa"
+format:
+  html:
+    self-contained: true
+---
+
+> Statistic Model for predicting manually coded direction with the matching stereotype indexes
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_knit$set(root.dir = "C:/Users/salonbark/Desktop/R/stereotype")
+
+library(tidyverse)
+library(haven)
+library(labelled)
+library(writexl)
+library(gtsummary)
+library(stringr)
+library(lme4)
+library(sjPlot)
+library(dplyr)
+```
+
+
+```{r}
+# Ensure 'entity' is a factor and relevel to make 'The public sector' the reference category
+StatModel_df$entity <- factor(StatModel_df$entity)
+StatModel_df$entity <- relevel(StatModel_df$entity, ref = "The public sector")
+```
+
+
+```{r}
+StatModel_df$children <- factor(StatModel_df$children, 
+                                levels = c(0, 1, 2), 
+                                labels = c("No", "Yes", "Yes"))
+StatModel_df$children <- relevel(StatModel_df$children, ref = "Yes")
+
+
+```
+
+```{r}
+StatModel_df$sector_of_employment <- factor(StatModel_df$sector_of_employment, 
+                                            levels = c(1, 2, 3, 4, 5, 6, 7), 
+                                            labels = c("Public sector", "Private sector", 
+                                                       "Third sector (non-profits)", 
+                                                       "Self-employed", "Unemployed", 
+                                                       "Prefer not to answer", "Other"))
+StatModel_df$sector_of_employment <- relevel(StatModel_df$sector_of_employment, ref = "Public sector")
+
+```
+
+```{r}
+StatModel_df <- StatModel_df %>%
+  mutate(sector_binary = ifelse(sector_of_employment == "Public sector", 1, 0),
+         sector_binary = replace_na(sector_binary, 0))
+
+table(StatModel_df$sector_binary)
+
+```
+
+
+
+# Sociability
+```{r}
+StatMod_sociability <- StatModel_df %>% 
+  filter(sociability == 1) 
+StatMod_sociability %>% count(manualDirection_pos1negnue0)
+```
+
+
+## 1.a. entities + index_sociability
+```{r}
+model_1a <- glmer(manualDirection_pos1negnue0 ~ entity + index_Sociability  + (1|id), 
+                  data = StatMod_sociability, family = binomial(link = "logit"))
+summary(model_1a)
+
+```
+
+
+## 1.b. entities + index_sociability + personal_perception
+```{r}
+model_1b <- glmer(manualDirection_pos1negnue0 ~ entity + S_Personal_perception + index_Sociability + (1|id), 
+                  data = StatMod_sociability, family = binomial(link = "logit"))
+summary(model_1b)
+
+```
+
+
+## 1.c. entities + index_sociability + personal_perception + Demographics
+```{r}
+model_1c <- glmer(
+  manualDirection_pos1negnue0 ~ entity + S_Personal_perception + index_Sociability +
+    age_group + gender + social_status + education + children + sector_binary + (1|id), 
+  data = StatMod_sociability, family = binomial(link = "logit")
+)
+summary(model_1c)
+```
+
+
+## Sociability Table - Three models 
+```{r}
+tab_model(model_1a, model_1b, model_1c,
+          collapse.ci = TRUE,
+          show.loglik = TRUE,
+          show.aic = TRUE,
+          show.icc = FALSE, 
+          digits = 2,
+          title = "Sociability",
+          emph.p = TRUE  
+          )  
+```
+
+# Morality
+
+```{r}
+StatMod_Morality <- StatModel_df %>% 
+  filter(morality == 1) 
+StatMod_Morality %>% count(manualDirection_pos1negnue0)
+```
+
+## 1.a. entities + index_Morality
+```{r}
+modelMO_1a <- glmer(manualDirection_pos1negnue0 ~ entity + index_Morality  + (1|id), 
+                    data = StatMod_Morality, family = binomial(link = "logit"))
+summary(modelMO_1a)
+```
+
+## 1.b. entities + index_Morality + personal_perception
+```{r}
+modelMO_1b <- glmer(manualDirection_pos1negnue0 ~ entity + S_Personal_perception + index_Morality + (1|id), 
+                    data = StatMod_Morality, family = binomial(link = "logit"))
+summary(modelMO_1b)
+```
+
+## 1.c. entities + index_Morality + personal_perception + Demographics
+```{r}
+modelMO_1c <- glmer(manualDirection_pos1negnue0 ~ entity + S_Personal_perception + index_Morality +
+                    age_group + gender + social_status + education + children + sector_binary + (1|id), 
+                    data = StatMod_Morality, family = binomial(link = "logit"))
+summary(modelMO_1c)
+
+```
+
+## Morality Table - Three models 
+```{r}
+
+tab_model(modelMO_1a, modelMO_1b, modelMO_1c,
+          collapse.ci = TRUE,
+          show.loglik = TRUE,
+          show.aic = TRUE,
+          show.icc = FALSE, 
+          digits = 2,
+          emph.p = TRUE  
+          ) 
+```
+
+
+# Ability
+
+```{r}
+StatMod_Ability <- StatModel_df %>% 
+  filter(ability == 1) 
+StatMod_Ability %>% count(manualDirection_pos1negnue0)
+```
+
+## 1.a. entities + index_Ability
+
+```{r}
+modelAB_1a <- glmer(manualDirection_pos1negnue0 ~ entity + index_Ability  + (1|id), 
+                    data = StatMod_Ability, family = binomial(link = "logit"))
+summary(modelAB_1a)
+```
+
+
+## 1.b. entities + index_Ability + personal_perception
+```{r}
+modelAB_1b <- glmer(manualDirection_pos1negnue0 ~ entity + S_Personal_perception + index_Ability + (1|id), 
+                    data = StatMod_Ability, family = binomial(link = "logit"))
+summary(modelAB_1b)
+```
+
+## 1.c. entities + index_Ability + personal_perception + Demographics
+```{r}
+modelAB_1c <- glmer(manualDirection_pos1negnue0 ~ entity + S_Personal_perception + index_Ability +
+                    age_group + gender + social_status + education + children + sector_binary + (1|id), 
+                    data = StatMod_Ability, family = binomial(link = "logit"))
+summary(modelAB_1c)
+```
+
+## Ability Table - Three models
+```{r}
+tab_model(modelAB_1a, modelAB_1b, modelAB_1c,
+          collapse.ci = TRUE,
+          show.loglik = TRUE,
+          show.aic = TRUE,
+          show.icc = FALSE, 
+          digits = 2,
+          emph.p = TRUE  
+          )
+```
+
+
+# Assertiveness
+```{r}
+StatMod_Assertiveness <- StatModel_df %>% 
+  filter(assertiveness == 1) 
+StatMod_Assertiveness %>% count(manualDirection_pos1negnue0)
+```
+
+## 1.a. entities + index_Assertiveness
+```{r}
+modelAs_1a <- glmer(manualDirection_pos1negnue0 ~ entity + index_Assertiveness  + (1|id), 
+                    data = StatMod_Assertiveness, family = binomial(link = "logit"))
+summary(modelAs_1a)
+```
+
+## 1.b. entities + index_Assertiveness + personal_perception
+```{r}
+modelAs_1b <- glmer(manualDirection_pos1negnue0 ~ entity + S_Personal_perception + index_Assertiveness + (1|id), 
+                    data = StatMod_Assertiveness, family = binomial(link = "logit"))
+summary(modelAs_1b)
+```
+
+## 1.c. entities + index_Assertiveness + personal_perception + Demographics
+```{r}
+modelAs_1c <- glmer(manualDirection_pos1negnue0 ~ entity + S_Personal_perception + index_Assertiveness +
+                    age_group + gender + social_status + education + children + sector_binary + (1|id), 
+                    data = StatMod_Assertiveness, family = binomial(link = "logit"))
+summary(modelAs_1c)
+tab_model(modelAs_1a, modelAs_1b, modelAs_1c, collapse.ci = TRUE, show.loglik = TRUE, show.aic = TRUE)
+```
+
+## Assertiveness Table - Three models
+```{r}
+tab_model(modelAs_1a, modelAs_1b, modelAs_1c,
+          collapse.ci = TRUE,
+          show.loglik = TRUE,
+          show.aic = TRUE,
+          show.icc = FALSE, 
+          digits = 2,
+          emph.p = TRUE  
+          )
+```
+
+# Status
+```{r}
+StatMod_Status <- StatModel_df %>% 
+  filter(status == 1) 
+StatMod_Status %>% count(manualDirection_pos1negnue0)
+```
+
+## 1.a. entities + index_Status
+```{r}
+modelST_1a <- glmer(manualDirection_pos1negnue0 ~ entity + index_Status  + (1|id), 
+                    data = StatMod_Status, family = binomial(link = "logit"))
+summary(modelST_1a)
+```
+
+## 1.b. entities + index_Status + personal_perception
+```{r}
+modelST_1b <- glmer(manualDirection_pos1negnue0 ~ entity + S_Personal_perception + index_Status + (1|id), 
+                    data = StatMod_Status, family = binomial(link = "logit"))
+summary(modelST_1b)
+```
+
+## 1.c. entities + index_Status + personal_perception + Demographics
+```{r}
+modelST_1c <- glmer(manualDirection_pos1negnue0 ~ entity + S_Personal_perception + index_Status +
+                    age_group + gender + social_status + education + children + sector_binary + (1|id), 
+                    data = StatMod_Status, family = binomial(link = "logit"))
+summary(modelST_1c)
+
+```
+
+## Status Table - Three models
+```{r}
+tab_model(modelST_1a, modelST_1b, modelST_1c,
+          collapse.ci = TRUE,
+          show.loglik = TRUE,
+          show.aic = TRUE,
+          show.icc = FALSE, 
+          digits = 2,
+          emph.p = TRUE  
+          )
+```
+
+
+## *Model Tabulation*
+
+
+```{r}
+tab_model(model_1b, modelMO_1b, modelAB_1b, modelAs_1b, modelST_1b,
+collapse.ci = T,
+emph.p = T,
+rm.terms = "entity",
+show.icc = F,
+show.loglik = TRUE,
+show.r2 = FALSE,
+dv.labels = c("Socability","Morality", "Ability", "Assertiveness", "Status")) 
+```
+
+
+
+
+
+
+
+

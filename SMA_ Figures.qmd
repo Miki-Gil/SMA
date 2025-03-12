@@ -1,0 +1,385 @@
+---
+title: "SMA_ Figures"
+author: "Michal Gilboa"
+format: 
+  html: 
+    code-fold: true
+    self-contained: true
+    embed-resources: true 
+    title-block-banner: "#C9DEDD"
+title-block-banner-color: "black"
+editor: visual
+---
+
+```{r}
+load(".RData")
+library(tidyverse)
+library(forcats)
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+library(reshape2)
+library(scales)
+library(RColorBrewer)
+library(ggrepel)
+library(gt)
+library(gtExtras)
+library(svglite)
+library(ggtext)
+library(Cairo)
+```
+
+# **A Multidimensional Approach to Exploring and Comparing Public Sector Stereotypes**
+
+## *Article's Figures*
+
+## Figure 1: The Relationship Between Coded Responses and Scale Measures
+
+```{r}
+my_colors <- c("Negative" = "#ff725c", "Positive" = "#219ebc", "Neutral" = "#ffdc7c","NA"="#fee6bb" )
+
+windowsFonts(Times = windowsFont("TT Times New Roman"))
+plot_dimension <- function(data, index_col, category_col, title, x_label) {
+  # Compute the median for each category
+  stats <- data %>%
+    group_by(!!sym(category_col)) %>%
+    summarize(
+      median_value = median(!!sym(index_col), na.rm = TRUE)
+    )
+  
+  ggplot(data, aes(x = !!sym(index_col), fill = !!sym(category_col))) +
+    geom_histogram(aes(y = ..density..), alpha = 0.65, bins = 8, position = "identity") + 
+    # Add vertical line for median
+    geom_vline(data = stats, aes(xintercept = median_value, color = !!sym(category_col)), 
+               linetype = "solid", size = 0.8, show.legend = FALSE) +  # Solid line for median
+    labs(x = x_label, y = "%") +  # Use custom x-axis label
+    scale_fill_manual(name = category_col, values = my_colors) +
+    scale_color_manual(values = my_colors) +  # Use the same colors for lines
+    theme_minimal(base_family = "Times") +  # Set font to Times New Roman
+    theme(
+      legend.position = "none",        # Remove legend
+      panel.grid = element_blank(),    # Remove grid lines
+      strip.text = element_text(size = 12)
+    ) +
+    facet_grid(rows = vars(!!sym(category_col)))
+}
+
+```
+
+```{r}
+plots <- list(
+  plot_dimension(ManCodeIndex_filtered, "index_Ability", "AbilityDirect", "Ability", "Ability Index") +
+    labs(title = "Ability"),  # Add column title
+  plot_dimension(ManCodeIndex_filtered, "index_Assertiveness", "AssertivenessDirect", "Assertiveness", "Assertiveness Index") +
+    labs(title = "Assertiveness"),  # Add column title
+  plot_dimension(ManCodeIndex_filtered, "index_Status", "StatusDirect", "Status", "Status Index") +
+    labs(title = "Status"),  # Add column title
+  plot_dimension(ManCodeIndex_filtered, "index_Morality", "MoralityDirect", "Morality", "Morality Index") +
+    labs(title = "Morality"),  # Add column title
+  plot_dimension(ManCodeIndex_filtered, "index_Sociability", "sociabilityDirect", "Sociability", "Sociability Index") +
+    labs(title = "Sociability")  # Add column title
+)
+
+# Combine all plots into a grid with column titles
+final_plot <- wrap_plots(plots, ncol = 5) +
+  plot_annotation(
+    theme = theme(plot.title = element_text(hjust = 0.5, size = 12, face = "bold", family = "Times"),
+     plot.caption = element_markdown(size = 11, hjust = 0, family = "Times")),
+    caption = "*Note:* Median values are represented by solid vertical lines."
+    )  
+ggsave("final_plot.png", 
+       width = 27, height = 23, 
+       units = c("cm"), dpi = 300)
+
+print(final_plot)
+
+
+```
+
+## Figure 2: Prevalence and Direction Tendency of the General Public Sector Frames
+
+```{r}
+direction_palette <- c("Negative" = "#ff725c", 
+                       "Positive" = "#219ebc", 
+                       "Neutral" = "#ffdc7c")
+
+windowsFonts(Times = windowsFont("TT Times New Roman"))
+
+GenralEntity <- prop_Entity_Direction %>%
+  filter(entity %in% c("The public sector", "Public sector organizations", 
+                       "Public sector employees")) %>%
+  ungroup() %>%  
+  
+  mutate(entity = factor(entity, levels = c("The public sector", 
+                                            "Public sector organizations", 
+                                            "Public sector employees"))) %>%
+
+  group_by(entity, dimension)
+
+PrevDirGenral <- ggplot(GenralEntity, aes(x = dimension, y = prop, fill = direction_coded_new)) +
+  geom_bar(position = "stack", stat = "identity", alpha = 0.9, width = 0.8) +
+  scale_fill_manual(values = direction_palette) + 
+  labs(title = "The General Public Sector Frames", x= "Dimension", y = "Relative frequency (prevalence)", fill = "Direction") +
+  coord_flip() +
+  facet_wrap(vars(entity), ncol = 3, labeller = label_wrap_gen(multi_line = TRUE, width = 15)) +
+  theme_minimal() +
+  theme(panel.spacing = unit(0.2, "in"),
+        axis.text.y = element_text(size = 9),
+        axis.text.x = element_text(size = 8, angle = 45),
+          plot.caption = element_text(face = "bold", 
+                                    size = 14, 
+                                    hjust = 1, 
+                                    lineheight = 1.2), 
+        plot.margin = margin(20, 20, 20, 20),
+        strip.text = element_text(size = 10, face = "italic") 
+        ) +
+  geom_text(aes(label = ifelse(direction_coded_new == "Neutral", 
+                               "", entity_percent_label)),
+            position = position_stack(vjust = 0.5), angle = 45,
+            fontface = "bold", family = "Times", size = 3, colour = "#023047")
+
+ggsave("PrevDirGenral.png", width = 18, height = 10, units = c("cm"), dpi = 300)
+```
+
+![](plots of SMA/final/PrevDirGenral.png){fig-align="center"}
+
+## Figure 3: Accessibility of Dimensions by Prevalence and Response Order of the General Public Sector Frames
+
+```{r}
+Public_Sector <- Public_Sector %>%
+  mutate(Entity = factor(Entity, levels = c("The public sector",
+                                            "Public sector organizations",
+                                            "Public sector employees")))
+
+```
+
+```{r}
+Public_Sector <- Public_Sector %>%
+  ungroup() %>%  # Ensure no grouping conflicts
+  mutate(Entity = factor(Entity, levels = c("The public sector",
+                                            "Public sector organizations",
+                                            "Public sector employees")))
+
+AccessibilityGenral <- ggplot(Public_Sector, aes(x = Accessibility, y = access.prop.inlevel, group = Dimension, color = Dimension)) +
+  geom_line(size = 2, alpha = 0.5) +
+  geom_point(size = 3) +  
+  scale_color_manual(values = my_palette) + 
+  labs(title = "The General Public Sector Frames", x= "Accessibility - response order", y = "Proportion", color = "Dimension") +
+  facet_wrap(vars(Entity), 
+             ncol = 3, 
+             labeller = label_wrap_gen(multi_line = TRUE, width = 20)) + 
+  theme_minimal() +
+  theme(panel.spacing = unit(0.2, "in"),
+        plot.margin = margin(20, 20, 20, 20),
+        plot.caption = element_text(size = 14, hjust = 0, lineheight = 1.2, face = "bold"),
+        axis.text.y = element_text(size = 10),
+        axis.text.x = element_text(size = 10),
+        text = element_text(family = "Times", size = 12),
+        strip.text = element_text(size = 10, face = "italic")) 
+
+ggsave("AccessibilityGenral.png", width = 18, height = 8, units = c("cm"), dpi = 300)
+
+
+```
+
+![](AccessibilityGenral.png){fig-align="center"}
+
+## Figure 4: Prevalence and Direction Distribution of the General Public Sector and the Organizational Frames
+
+```{r}
+direction_palette <- c("Negative" = "#ff725c", 
+                       "Positive" = "#219ebc", 
+                       "Neutral" = "#ffdc7c")
+
+windowsFonts(Times = windowsFont("TT Times New Roman"))
+
+Organizations <- prop_Entity_Direction %>%
+  filter(entity %in% c("The public sector",
+                       "Public education system", 
+                       "Public hospital", 
+                       "The tax authority", 
+                       "The police"
+                       )) %>%
+  ungroup() %>%  # Ensure no grouping conflicts
+  mutate(entity = factor(entity, levels = c("The public sector",
+                       "Public education system", 
+                       "Public hospital", 
+                       "The tax authority", 
+                       "The police"))) %>%
+
+  group_by(entity, dimension)
+
+Prev_Dir_ORG <- ggplot(Organizations, aes(x = dimension, y = prop, fill = direction_coded_new)) +
+  geom_bar(position = "stack", stat = "identity",  alpha = 0.9) +
+  scale_fill_manual(values = direction_palette) + 
+  labs(title = "The Organizational Frames", x= "Dimension", y = "Relative frequency (prevalence)", fill = "Direction") +
+  coord_flip() +
+  facet_wrap(vars(entity), ncol = 3, labeller = label_wrap_gen(multi_line = TRUE, width = 20)) +
+  theme_minimal() +
+  theme(panel.spacing = unit(0.2, "in"),
+        axis.text.y = element_text(size = 10),
+        axis.text.x = element_text(size = 8, angle = 45),
+          plot.caption = element_text(face = "bold", 
+                                    size = 14, 
+                                    hjust = 1, 
+                                    lineheight = 1.2), 
+        plot.margin = margin(20, 20, 20, 20),
+        strip.text = element_text(size = 10, face = "italic") 
+        ) +
+   geom_text(aes(label = ifelse(direction_coded_new == "Neutral", 
+                               "", entity_percent_label)),
+            position = position_stack(vjust = 0.5), angle = 45,
+            fontface = "bold", size = 3, colour = "#023047")
+
+ggsave("Prev_Dir_ORG.png", width = 22, height = 18, units = c("cm"), dpi = 300)
+```
+
+![](plots of SMA/final/Prev_Dir_ORG.png){fig-align="center"}
+
+## Figure 5: Accessibility of Dimensions by Prevalence and Response Order of the General Public Sector and the Organizational Frames
+
+```{r}
+ORG2 <- prop_Accessibility %>%
+  filter(Entity %in% c("The public sector",
+                       "Public education system", 
+                       "Public hospital", 
+                       "The tax authority", 
+                       "The police" 
+                       )) %>%
+  ungroup() %>%  # Ensure no grouping conflicts
+  mutate(Entity = factor(Entity, levels = c("The public sector",
+                       "Public education system", 
+                       "Public hospital", 
+                       "The tax authority", 
+                       "The police")))
+
+AccessibilityORG <- ggplot(ORG2, aes(x = Accessibility, y = access.prop.inlevel, group = Dimension, color = Dimension)) +
+  geom_line(size = 2, alpha = 0.5) +
+  geom_point(size = 3) +  
+  scale_color_manual(values = my_palette) + 
+  labs(title = "The Organizational Frames", x= "Accessibility - response order", y = "Proportion", color = "Dimension") +
+  facet_wrap(vars(Entity), 
+             ncol = 3, 
+             labeller = label_wrap_gen(multi_line = TRUE, width = 20)) + 
+  theme_minimal() +
+  theme(panel.spacing = unit(0.2, "in"),
+        plot.margin = margin(20, 20, 20, 20),
+        plot.caption = element_text(size = 14, hjust = 0, lineheight = 1.2, face = "bold"),
+        axis.text.y = element_text(size = 10),
+        axis.text.x = element_text(size = 10),
+        text = element_text(family = "Times", size = 12),
+        strip.text = element_text(size = 10, face = "italic")) 
+
+ggsave("AccessibilityORG.png", width = 18, height = 14, units = c("cm"), dpi = 300)
+
+
+ 
+```
+
+![](plots of SMA/final/AccessibilityORG.png){fig-align="center"}
+
+## Figure 6: Prevalence and Direction Distribution of Public Sector employees and specific occupational Frames
+
+```{r}
+windowsFonts(Times = windowsFont("TT Times New Roman"))
+
+employees <- prop_Entity_Direction %>%
+  filter(entity %in% c("Public sector employees",
+                                    "Education inspectors", 
+                                    "Public school teachers", 
+                                    "Police investigators", 
+                                    "Police traffic policemen", 
+                                    "Public hospital administrative workers",
+                                    "Public hospital doctors", 
+                                    "Tax authority service workers", 
+                                    "Tax inspectors")) %>%
+   ungroup() %>%  
+  mutate(entity = factor(entity, 
+                         levels = c("Public sector employees",
+                                    "Education inspectors", 
+                                    "Public school teachers", 
+                                    "Police investigators", 
+                                    "Police traffic policemen", 
+                                    "Public hospital administrative workers",
+                                    "Public hospital doctors", 
+                                    "Tax authority service workers", 
+                                    "Tax inspectors"
+                                    ))) %>%
+  group_by(entity, dimension)
+
+Prev_Dir_employees <- ggplot(employees, aes(x = dimension, y = prop, fill = direction_coded_new)) +
+  geom_bar(position = "stack", stat = "identity", alpha = 0.9, width = 0.8) +
+  scale_fill_manual(values = direction_palette) + 
+  labs(title = "The Occupational Frames", x= "Dimension", y = "Relative frequency (prevalence)", fill = "Direction") +
+  coord_flip() +
+  facet_wrap(vars(entity), ncol = 3, labeller = label_wrap_gen(multi_line = TRUE, width = 20)) +
+  theme_minimal() +
+  theme(panel.spacing = unit(0.2, "in"),
+        axis.text.y = element_text(size = 10),
+        axis.text.x = element_text(size = 8, angle = 45),
+          plot.caption = element_text(face = "bold", 
+                                    size = 14, 
+                                    hjust = 1, 
+                                    lineheight = 1.2), 
+        plot.margin = margin(20, 20, 20, 20),
+        strip.text = element_text(size = 10, face = "italic") 
+        ) +
+   geom_text(aes(label = ifelse(direction_coded_new == "Neutral", 
+                               "", entity_percent_label)),
+            position = position_stack(vjust = 0.5), angle = 45,
+            fontface = "bold", size = 3, colour = "#023047")
+
+ggsave("Prev_Dir_employees.png", width = 20, height = 23, units = c("cm"), dpi = 300)
+
+
+```
+
+![](plots of SMA/final/Prev_Dir_employees.png){fig-align="center"}
+
+## Figure 7: Accessibility of Dimensions by Prevalence and Response Order of Public Sector employees and specific occupational Frames
+
+```{r}
+employees2 <- prop_Accessibility %>%
+  filter(Entity %in% c("Public sector employees",
+                                    "Education inspectors", 
+                                    "Public school teachers", 
+                                    "Police investigators", 
+                                    "Police traffic policemen", 
+                                    "Public hospital administrative workers",
+                                    "Public hospital doctors", 
+                                    "Tax authority service workers", 
+                                    "Tax inspectors")) %>%
+  ungroup() %>%  
+  mutate(Entity = factor(Entity, 
+                         levels = c("Public sector employees",
+                                    "Education inspectors", 
+                                    "Public school teachers", 
+                                    "Police investigators", 
+                                    "Police traffic policemen", 
+                                    "Public hospital administrative workers",
+                                    "Public hospital doctors", 
+                                    "Tax authority service workers", 
+                                    "Tax inspectors"
+                                    )))
+
+AccessibilityEmployees <- ggplot(employees2, aes(x = Accessibility, y = access.prop.inlevel, group = Dimension, color = Dimension)) +
+  geom_line(size = 2, alpha = 0.5) +
+  geom_point(size = 3) +  
+  scale_color_manual(values = my_palette) + 
+  labs(title = "The Occupational Frames", x= "Accessibility - response order", y = "Proportion", color = "Dimension") +
+  facet_wrap(vars(Entity), 
+             ncol = 3, 
+             labeller = label_wrap_gen(multi_line = TRUE, width = 20)) + 
+  theme_minimal() +
+  theme(panel.spacing = unit(0.2, "in"),
+        plot.margin = margin(20, 20, 20, 20),
+        plot.caption = element_text(size = 14, hjust = 0, lineheight = 1.2, face = "bold"),
+        axis.text.y = element_text(size = 10),
+        axis.text.x = element_text(size = 10),
+        text = element_text(family = "Times", size = 12),
+        strip.text = element_text(size = 10, face = "italic")) 
+
+ggsave("AccessibilityEmployees.png", width = 18, height = 20, units = c("cm"), dpi = 300)
+```
+
+![](plots of SMA/final/AccessibilityEmployees.png)
