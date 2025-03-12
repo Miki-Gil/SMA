@@ -304,6 +304,17 @@ dv.labels = c("Socability","Morality", "Ability", "Assertiveness", "Status"))
 
 
 
+#New table
+```{r}
+tab_model(model_1b, modelMO_1b, modelAB_1b, modelAs_1b, modelST_1b,
+collapse.ci = F,
+emph.p = T,
+rm.terms = "entity",
+show.icc = F,
+show.loglik = TRUE,
+show.r2 = FALSE,
+dv.labels = c("Socability","Morality", "Ability", "Assertiveness", "Status")) 
+```
 
 
 
