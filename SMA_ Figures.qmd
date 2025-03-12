@@ -29,6 +29,8 @@ library(ggtext)
 library(Cairo)
 ```
 
+test
+
 # **A Multidimensional Approach to Exploring and Comparing Public Sector Stereotypes**
 
 ## *Article's Figures*
@@ -141,7 +143,7 @@ PrevDirGenral <- ggplot(GenralEntity, aes(x = dimension, y = prop, fill = direct
 ggsave("PrevDirGenral.png", width = 18, height = 10, units = c("cm"), dpi = 300)
 ```
 
-![](plots of SMA/final/PrevDirGenral.png){fig-align="center"}
+![](plots%20of%20SMA/final/PrevDirGenral.png){fig-align="center"}
 
 ## Figure 3: Accessibility of Dimensions by Prevalence and Response Order of the General Public Sector Frames
 
@@ -234,7 +236,7 @@ Prev_Dir_ORG <- ggplot(Organizations, aes(x = dimension, y = prop, fill = direct
 ggsave("Prev_Dir_ORG.png", width = 22, height = 18, units = c("cm"), dpi = 300)
 ```
 
-![](plots of SMA/final/Prev_Dir_ORG.png){fig-align="center"}
+![](plots%20of%20SMA/final/Prev_Dir_ORG.png){fig-align="center"}
 
 ## Figure 5: Accessibility of Dimensions by Prevalence and Response Order of the General Public Sector and the Organizational Frames
 
@@ -276,7 +278,7 @@ ggsave("AccessibilityORG.png", width = 18, height = 14, units = c("cm"), dpi = 3
  
 ```
 
-![](plots of SMA/final/AccessibilityORG.png){fig-align="center"}
+![](plots%20of%20SMA/final/AccessibilityORG.png){fig-align="center"}
 
 ## Figure 6: Prevalence and Direction Distribution of Public Sector employees and specific occupational Frames
 
@@ -334,7 +336,7 @@ ggsave("Prev_Dir_employees.png", width = 20, height = 23, units = c("cm"), dpi =
 
 ```
 
-![](plots of SMA/final/Prev_Dir_employees.png){fig-align="center"}
+![](plots%20of%20SMA/final/Prev_Dir_employees.png){fig-align="center"}
 
 ## Figure 7: Accessibility of Dimensions by Prevalence and Response Order of Public Sector employees and specific occupational Frames
 
@@ -382,4 +384,4 @@ AccessibilityEmployees <- ggplot(employees2, aes(x = Accessibility, y = access.p
 ggsave("AccessibilityEmployees.png", width = 18, height = 20, units = c("cm"), dpi = 300)
 ```
 
-![](plots of SMA/final/AccessibilityEmployees.png)
+![](plots%20of%20SMA/final/AccessibilityEmployees.png)
